@@ -13,4 +13,5 @@ glpk has a stupid error that results in the program always timing out.
 line 140; replace 1 second timeout with 10 second. little guy just takes a while!
 
 to install local freeflux, run
-pip install /Users/lilithflint/Desktop/freeflux_bonus-optimizers/freeflux
+pip uninstall freeflux
+pip install /Users/lilithflint/Desktop/MFA/MFA/modified-freeflux/freeflux
