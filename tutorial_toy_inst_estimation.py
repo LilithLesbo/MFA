@@ -1,11 +1,9 @@
 '''Example of flux estimation at isotopically nonstationary (INST) state with a toy model.
 '''
 
-
 from os import makedirs
 import pandas as pd
 from freeflux import Model
-
 
 MODEL_FILE = '/Users/lilithflint/Desktop/MFA/MFA/models/toy/reactions.tsv' 
 MEASURED_MDVS = '/Users/lilithflint/Desktop/MFA/MFA/models/toy/measured_inst_MDVs.tsv'
@@ -16,7 +14,7 @@ OUT_DIR = '/Users/lilithflint/Desktop/MFA/MFA/models/toy/inst_estimation'
 # estimate fluxes and concentrations at INST state
 def toy_model_inst_fitting():
 
-    model = ('demo')
+    model = Model('demo')
     model.read_from_file(MODEL_FILE)
 
     with model.fitter('inst') as ifit:
@@ -42,8 +40,15 @@ def toy_model_inst_fitting():
         res = ifit.solve(solver = 'ralg')
     
     # print(res.optimization_successful)
-
+    print(res.opt_resids)
+    sumsq_resid = 0
+    for resid in res.opt_resids:
+        sumsq_resid += (resid)**2
+    print(f"Sum squared residual of best fit: {sumsq_resid}")
     # save the results
+    pd.Series(res.opt_resids).to_excel(
+        OUT_DIR+'/residuals.xlsx'
+    )
     pd.Series(res.opt_net_fluxes).to_excel(
         OUT_DIR+'/estimated_net_fluxes.xlsx'
     )
@@ -108,7 +113,7 @@ def toy_model_inst_fitting_CIs():
         res = ifit.solve_with_confidence_intervals(
             solver = 'ralg', 
             n_runs = 10, 
-            n_jobs = 5
+            n_jobs = 5,
         )
 
     # save the CIs
@@ -141,4 +146,4 @@ if __name__ == '__main__':
 
     makedirs(OUT_DIR, exist_ok = True)
     toy_model_inst_fitting()
-    toy_model_inst_fitting_CIs()
+    #toy_model_inst_fitting_CIs()

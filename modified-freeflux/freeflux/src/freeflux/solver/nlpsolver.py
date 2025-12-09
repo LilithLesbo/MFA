@@ -423,6 +423,8 @@ class InstMFAModel(MFAModel):
             
             flux_diff = self._calculate_difference_sim_exp_fluxes()
             flux_inv_cov = self.model.measured_fluxes_inv_cov
+            
+            #matrix multiplication I believe?
             obj2 = flux_diff@flux_inv_cov@flux_diff
             
             return obj1 + obj2

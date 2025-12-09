@@ -10,13 +10,14 @@ from copy import deepcopy
 from math import ceil
 import numpy as np
 from multiprocessing import Pool
+from multiprocessing import cpu_count as m_cpu_count
 from ..io.inputs import read_measurements_from_file, read_initial_values
 from ..io.results import InstFitResults, InstFitMCResults
 from .inst_simulate import InstSimulator
 from .fit import Fitter
 from ..solver.nlpsolver import InstMFAModel
 from ..utils.progress import Progress
-
+from os import getpid
 
 class InstFitter(Fitter, InstSimulator):
     '''
@@ -339,6 +340,7 @@ class InstFitter(Fitter, InstSimulator):
         self._estimate_fluxes_range(self.model.unbalanced_metabolites)
         self._set_default_concentration_bounds()
         self._estimate_concentrations_range()
+        print(f"Preparation successful for all {n_jobs} instances.")
     
         
     def _check_dependencies(self, fit_measured_fluxes):
@@ -501,7 +503,9 @@ class InstFitter(Fitter, InstSimulator):
         optTotalfluxesSet = []
         optNetfluxesSet = []
         optConcsSet = []
-        for _ in range(nruns):
+        for i in range(nruns):
+            print(f"Starting job {i} of {nruns} for worker in CPU {getpid()}.")
+
             self.calculator._generate_random_fluxes()
             self.calculator._generate_random_inst_MDVs()
             
@@ -580,6 +584,10 @@ class InstFitter(Fitter, InstSimulator):
             nruns_worker = ceil(n_runs/n_jobs)
         
         pool = Pool(processes = n_jobs)
+        print(f"Activated {n_jobs} pool workers.")
+        print(f"There are {m_cpu_count()} CPUs currently active.")
+        print("If the above numbers don't match, I don't know what happened.")
+
         with Progress('INST fitting with CIs', silent = not show_progress):
             resSet = []
             for _ in range(n_jobs):

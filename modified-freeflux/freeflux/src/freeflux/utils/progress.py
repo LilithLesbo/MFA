@@ -60,7 +60,7 @@ class Progress():
             sleep(1)
             t2 = time()
             elapsed = timedelta(seconds = round(t2 - t1))
-            print(f'{descp} [elapsed: {elapsed}]', end = '\r')
+            print(f'{descp} [elapsed: {elapsed}]', end='\r')
         print('')
         
         
