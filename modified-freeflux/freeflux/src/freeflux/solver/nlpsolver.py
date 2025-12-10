@@ -415,10 +415,10 @@ class InstMFAModel(MFAModel):
             
             return obj
         
-        def f1(p):
+        def objective_func_standard(p):
             return _f(p)
             
-        def f2(p):
+        def objective_func_with_measured_flux(p):
             obj1 = _f(p)
             
             flux_diff = self._calculate_difference_sim_exp_fluxes()
@@ -428,8 +428,43 @@ class InstMFAModel(MFAModel):
             obj2 = flux_diff@flux_inv_cov@flux_diff
             
             return obj1 + obj2
+        def objective_func_with_measured_conc(p):
+            #copying code to work for concentrations instead
+            obj1 = _f(p)
+
+            #conc sectiom
+            conc_diff = self._calculate_difference_sim_exp_concs()
+            conc_inv_cov = self.model.measured_conc_inv_cov
+            obj3 = conc_diff@conc_inv_cov@conc_diff
+
+            return obj1 + obj3
+        
+        def objective_func_with_measured_both(p):
+            #copying code to work for concentrations as well as fluxes being measured
+            obj1 = _f(p)
+
+            #flux section
+            flux_diff = self._calculate_difference_sim_exp_fluxes()
+            flux_inv_cov = self.model.measured_fluxes_inv_cov
             
-        self.f = f2 if self.fit_measured_fluxes else f1
+            #matrix multiplication I believe?
+            obj2 = flux_diff@flux_inv_cov@flux_diff
+
+            #conc sectiom
+            conc_diff = self._calculate_difference_sim_exp_concs()
+            conc_inv_cov = self.model.measured_conc_inv_cov
+            obj3 = conc_diff@conc_inv_cov@conc_diff
+
+            return obj1 + obj2 + obj3
+        
+        if self.fit_measured_conc and self.fit_measured_fluxes:
+            self.f = objective_func_with_measured_both
+        elif self.fit_measured_fluxes:
+            self.f = objective_func_with_measured_flux
+        elif self.fit_measured_conc:
+            self.f = objective_func_with_measured_conc
+        else:
+            self.f = objective_func_standard
     
         
     def build_gradient(self):
