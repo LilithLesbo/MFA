@@ -11,4 +11,3 @@ print("code block two")
 
 from numpy import genfromtxt
 
-def import_metabolism_pathway()

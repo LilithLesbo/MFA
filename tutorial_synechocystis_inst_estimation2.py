@@ -10,7 +10,7 @@ from freeflux import Model
 print("success")
 
 
-MODEL_FILE = '/Users/lilithflint/Desktop/MFA/MFA/modified-freeflux/freeflux/models/synechocystis/experimental_data/reactions.xlsx' 
+MODEL_FILE = '/Users/lilithflint/Desktop/MFA/MFA/models/synechocystis/experimental_data/reactions.xlsx' 
 MEASURED_MDVS = '/Users/lilithflint/Desktop/MFA/MFA/modified-freeflux/freeflux/models/synechocystis/experimental_data/measured_inst_MDVs.xlsx'
 MEASURED_FLUXES = '/Users/lilithflint/Desktop/MFA/MFA/modified-freeflux/freeflux/models/synechocystis/experimental_data/measured_fluxes.xlsx'
 OUT_DIR = '/Users/lilithflint/Desktop/MFA/MFA/modified-freeflux/freeflux/models/synechocystis/experimental_data/inst_estimation'
@@ -29,6 +29,9 @@ def inst_fitting():
     cyano = Model('cyano')
     cyano.read_from_file(MODEL_FILE)
     
+    for id, reaction in cyano.reactions_info.items():
+        print(f"{id}, {reaction}")
+
     with cyano.fitter('inst') as ifit:
         # specify the lableing strategy, 
         # use this method for every labeled substrate

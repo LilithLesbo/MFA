@@ -22,7 +22,7 @@ from ..analysis.inst_simulate import InstSimulator
 from ..analysis.fit import Fitter
 from ..analysis.inst_fit import InstFitter
 from ..optim.optim import Optimizer
-
+import copy
 
 class Model():
     '''
@@ -243,46 +243,89 @@ class Model():
             if not rxn.host_models:
                 rxn.host_models = None
                 break    
-        
-        
+          
     def read_from_file(self, file):
         '''
         Parameters
         ----------
         file: file path
             tsv or excel file with reactions with fields "reaction_ID", "substrate_IDs(atom)", 
-            "product_IDs(atom)" and "reversibility".
+            "product_IDs(atom)", "reversibility", and "localisation".
 
             Header line starts with "#", and will be skiped.
         '''
-        
+        from tabulate import tabulate
         dataRaw = read_model_from_file(file)
+        print(tabulate(dataRaw, headers = 'keys', tablefmt = 'psql'))
+
+        #move reaction ids from data into indexes.
+        dataRaw.set_index(dataRaw.columns[0])    
+        print(tabulate(dataRaw, headers = 'keys', tablefmt = 'psql'))
         
+        # deletes whitespaces
         data = pd.DataFrame()
-        for col, ser in dataRaw.items():
-            if ser.dtype == object:
-                data[col] = ser.str.replace(r'\s+', '', regex = True)
-            else:
-                data[col] = ser
-        
+        whitespace_re = re.compile(r'\s+')
+        for col, column_series in dataRaw.items():
+            col_output = []
+            for index, raw_col_value in enumerate(column_series):
+                if isinstance(raw_col_value, str):
+                    col_output.append(re.sub(whitespace_re, '', raw_col_value))
+                else:
+                    col_output.append(raw_col_value)
+                    print(f'Value {raw_col_value} in position {index}, {col} went horribly wrong')
+            data[col] = col_output
+
+        # if no localisation data was included, set values to false automagically
+        if dataRaw.shape[1] == 4:
+            data['localisations'] = False
+
+        print(tabulate(data, headers = 'keys', tablefmt = 'psql'))
+
+        # [0-9\.] = match any number of digits and the symbol '.'
+        # catches metabolite stoichiometry
+        # ([.\w]+) = match any alphanumeric, underscore, and '.'
+        # catches metabolite id
+        # \(?([a-z0-9\.,]+|)\) = match reaction atoms in parentheses.
+
         pattern_re = re.compile(r'([0-9\.]+|)([.\w]+)\(?([a-z0-9\.,]+|)\)?')
-        for rxn, (subsStr, prosStr, rev) in data.iterrows():
+        for index, (rxnid, subsStr, prosStr, rev, localisation_input) in data.iterrows():
+            # ignore header rows
+            if rxnid.startswith('#'):
+                continue
+            # for each row, create a new reaction object, set ID and reversibility
+            # if localisations are listed, create a new reaction per localisation.
+            if localisation_input:
+                localisation_list = localisation_input.split(',')
+                
+                for localisation in localisation_list:
+                    v = Reaction(rxnid+'_'+localisation, reversible = bool(int(rev)))
+                    
+                    for stoy, metab, atoms in pattern_re.findall(subsStr):
+                        stoy = float(stoy) if stoy else 1.0
+                        atoms = atoms.split(',') if atoms else None
+                        v.add_substrates(Metabolite(metab+'_'+localisation, atoms), stoy)
             
-            v = Reaction(rxn, reversible = bool(int(rev)))
-            
-            for stoy, metab, atoms in pattern_re.findall(subsStr):
-                stoy = float(stoy) if stoy else 1.0
-                atoms = atoms.split(',') if atoms else None
-                v.add_substrates(Metabolite(metab, atoms), stoy)
-    
-            for stoy, metab, atoms in pattern_re.findall(prosStr):
-                stoy = float(stoy) if stoy else 1.0
-                atoms = atoms.split(',') if atoms else None
-                v.add_products(Metabolite(metab, atoms), stoy)
-            
-            self.add_reactions(v)
-    
-    
+                    for stoy, metab, atoms in pattern_re.findall(prosStr):
+                        stoy = float(stoy) if stoy else 1.0
+                        atoms = atoms.split(',') if atoms else None
+                        v.add_products(Metabolite(metab+'_'+localisation, atoms), stoy)
+                    
+                    self.add_reactions(v)
+            else:
+                v = Reaction(rxnid, reversible = bool(int(rev)))
+                    
+                for stoy, metab, atoms in pattern_re.findall(subsStr):
+                    stoy = float(stoy) if stoy else 1.0
+                    atoms = atoms.split(',') if atoms else None
+                    v.add_substrates(Metabolite(metab, atoms), stoy)
+        
+                for stoy, metab, atoms in pattern_re.findall(prosStr):
+                    stoy = float(stoy) if stoy else 1.0
+                    atoms = atoms.split(',') if atoms else None
+                    v.add_products(Metabolite(metab, atoms), stoy)
+                
+                self.add_reactions(v)
+        
     @property
     def metabolites_info(self):
         '''

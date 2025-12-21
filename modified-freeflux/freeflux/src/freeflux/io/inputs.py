@@ -22,24 +22,16 @@ def read_model_from_file(file):
         data = pd.read_csv(
             file, 
             sep = '\t', 
-            comment = '#', 
-            header = None, 
-            names = ['subs', 'pros', 'rev'], 
-            index_col = 0
         )
     elif re.search(r'xls', ext):
         data = pd.read_excel(
-            file, 
-            comment = '#', 
-            header = None, 
-            names = ['subs', 'pros', 'rev'], 
-            index_col = 0
+            file,
         )
     else:
         raise TypeError('can only read from .tsv or excel file')
     
-    data = data.dropna()
-    
+    data = data.fillna(value=False)
+
     return data
 
 
